@@ -20,78 +20,76 @@ def find_path (source_point, destination_point, mesh):
     """
 
     path = []
-    boxes = {}
     frontier = []
-    dist_traveled = {}
+    box_path = {}
+    current_cost = {}
     detail_points = {}
 
     start_box = None
     end_box = None
 
-    current_dp = source_point
+    
 
-    def cost(next):
     # return distance from previous point to new detail point
-        print(next)
-        print(current_dp)
-        return math.sqrt((current_dp[0] - next[0])**2 + (current_dp[1] - next[1])**2)
+    def cost(current, next):
+        return math.sqrt((current[0] - next[0])**2 + (current[1] - next[1])**2)
+    
 
-    #Box (x1, x2, y1, y2)
 
     # Find Starting box and ending box
     for box in mesh["boxes"]:
         if box[0] <= source_point[0] and box[2] <= source_point[1] and box[1] >= source_point[0] and box[3] >= source_point[1]:
             start_box = box
             heappush(frontier, (0, box))
-            boxes[box] = None
+            box_path[box] = None
             detail_points[box] = source_point
-            dist_traveled[box] = 0
+            current_cost[box] = 0
 
         if box[0] <= destination_point[0] and box[2] <= destination_point[1] and box[1] >= destination_point[0] and box[3] >= destination_point[1]:
             end_box = box
+            detail_points[box] = destination_point
+
 
 
     # Breadth First Search with priority Queue (Dijkstra's Algorithm)
     while len(frontier) > 0:
-        current = heappop(frontier)[1]
-        print(current)
+        priority, current_box = heappop(frontier)
 
-        if current == end_box:
+        if current_box == end_box:
             break
+        
+        for next in mesh["adj"][current_box]:
+            current_dp = detail_points[current_box]
+            next_dp = get_detail_point(current_dp, current_box, next)
+            new_cost = current_cost[current_box] + cost(current_dp, next_dp)
+            if (next not in box_path.keys()) or (new_cost < current_cost[next]):
+                detail_points[next] = next_dp
+                current_cost[next] = new_cost
+                priority = cost(detail_points[end_box], next)
+                heappush(frontier, (priority, next))
+                box_path[next] = current_box
 
-        for adj in mesh["adj"][current]:
-            print(adj)
-            dp = get_detail_point(current_dp, current, adj)
-            detail_points[adj] = dp
-            new_cost = dist_traveled[current] + cost(detail_points[adj])
-            if adj not in boxes.keys() or new_cost < dist_traveled[adj]:
-                dist_traveled[adj] = new_cost
-                priority = new_cost
-                heappush(frontier, (priority, adj))
-                boxes[adj] = current
 
-
-        current_dp = detail_points[current]
                 
 
 
 
 
 
-    if end_box not in boxes or start_box not in boxes:
+    if end_box not in box_path or start_box not in box_path:
         print("No path!")
     else:
         current = end_box
         path.append(destination_point)
         while current != start_box: 
             path.append(detail_points[current])
-            current = boxes[current]
+            current = box_path[current]
         path.append(source_point)
 
 
 
 
-    return path, boxes.keys()
+    return path, box_path.keys()
 
 
 
@@ -110,33 +108,26 @@ def get_detail_point(current_point, current, adj):
     #b1 = current
     #b2 = adj
 
-    #the range of two points for each adjacent box as alegal path to connect them
+    #the range of two points for each adjacent box as a legal path to connect them
     #(Max(b1x1, b2x1), (Max(b1y1, b2y1)))
     #(Min(b1x2, b2x2), (Min(b1y2, b2y2)))
 
-    point1 = (max(current[0], adj[0]), max(current[2], adj[2]))
-    point2 = (min(current[1], adj[1]), min(current[3], adj[3]))
-    print("point1: ", point1)
-    print("point2: ", point2)
+    x1, y1 = (max(current[0], adj[0]), max(current[2], adj[2]))
+    x2, y2 = (min(current[1], adj[1]), min(current[3], adj[3]))
+    rx, ry = (0,0)
 
-    if point1[0] == point2[0]:
-        if current_point[0] <= point1[0]:
-            print("left of the range")
-            return point1
-        if current_point[0] >= point2[0]:
-            print("right of the range")
-            return point2
-        print("verticle to the range")
-        return (current_point[0], point1[1])
-    
-    if point1[1] == point2[1]:
-        if current_point[1] <= point1[1]:
-            print("above the range")
-            return point1
-        if current_point[1] >= point2[1]:
-            print("under the range")
-            return point2
-        print("horizontal to the range")
-        return (point1[0], current_point[1])
-    
-    raise Exception("No Detail Point")
+    if current_point[0] < x1:
+        rx = x1
+    elif current_point[0] > x2:
+        rx = x2
+    else:
+        rx = current_point[0]
+
+    if current_point[1] < y1:
+        ry = y1
+    elif current_point[1] > y2:
+        ry = y2
+    else:
+        ry = current_point[1]
+
+    return (rx, ry)
