@@ -65,7 +65,7 @@ def find_path (source_point, destination_point, mesh):
             if (next not in box_path.keys()) or (new_cost < current_cost[next]):
                 detail_points[next] = next_dp
                 current_cost[next] = new_cost
-                priority = cost(detail_points[end_box], next)
+                priority = cost(detail_points[end_box], current_dp)
                 heappush(frontier, (priority, next))
                 box_path[next] = current_box
 
